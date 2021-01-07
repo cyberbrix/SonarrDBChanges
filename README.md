@@ -1,4 +1,3 @@
-# SonarrDBChanges
 # Sonarr DB change checking
 
 This script checks the Sonarr DB (nzbdrone.db) for changes from one execution to the next.
