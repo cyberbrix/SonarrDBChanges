@@ -29,19 +29,26 @@ Note: The code isn't perfect and always improving. If you have input, please let
 ## Output Examples
 
 *** Previous Series Information ***
+
 Showname    Ended
 
 11.22.63    0
+
 Breaking B  0
 
 *** Current Series Information ***
+
 Showname    Ended
 
 11.22.63    1
-Arrested D  1
-Batman Bey  1
-Batman: Th  1
-Big Little  1
-Breaking B  1
 
+Arrested D  1
+
+Batman Bey  1
+
+Batman: Th  1
+
+Big Little  1
+
+Breaking B  1
 
