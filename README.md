@@ -28,6 +28,32 @@ Note: The code isn't perfect and always improving. If you have input, please let
 
 ## Output Examples
 
+*** Previous Episode Information ***
+
+Showname       Season      Episode     title                                                                        Airdate
+
+-------------  ----------  ----------  ---------------------------------------------------------------------------  ----------
+
+Cosmos (2014)  0           1           Celebrating Carl Sagan: A Selection from the Library of Congress Dedication  2014-06-10
+
+Cosmos (2014)  0           2           Cosmos: A Spacetime Odyssey at Comic-Con 2013                                
+
+*** Current Episode Information ***
+
+Showname       Season      Episode     title                                                                        Airdate
+
+-------------  ----------  ----------  ---------------------------------------------------------------------------  ----------
+
+Cosmos (2014)  0           1           Celebrating Carl Sagan: A Selection from the Library of Congress Dedication  2014-06-10
+
+Cosmos (2014)  0           2           Cosmos: A Spacetime Odyssey at Comic-Con 2013                                2014-06-10
+
+Cosmos (2014)  0           3           Cosmos: A Spacetime Odyssey - The Voyage Continues                           2014-06-10
+
+Cosmos (2014)  0           4           Cosmos: A Spacetime Odyssey - The Cosmic Calendar                            2014-06-10
+
+
+
 *** Previous Series Information ***
 
 Showname    Ended

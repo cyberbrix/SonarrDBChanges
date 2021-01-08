@@ -14,9 +14,10 @@ then
   exit 1
 fi
 
+# Expand homepath to avoid variables. sqlite commands and cron can have issue with it
+eval homedir=~
 
-# specify the sonarr db location
-#sonarrdbpath="/home/$USER/.config/NzbDrone/nzbdrone.db"
+
 
 # Find the sonarr db
 sonarrdbpath=`find / -name "nzbdrone.db" -type f  -printf '%T+ %p\n'  2>/dev/null | grep -iv "find:/radarr" | sort -r | head -1 | cut -d' ' -f2-`
@@ -35,7 +36,7 @@ then
 fi 
 
 # Check of existing comaprison db for reference
-comparisondb="/home/$USER/.sonarrepisodeinfo.db"
+comparisondb="$homedir/.sonarrepisodeinfo.db"
 if [[ ! -r "$comparisondb" ]]
 then
   # no comparison needed, create the new db and exit
@@ -44,7 +45,7 @@ then
 fi
 
 # Create smaller database of current data to compare
-tempdb="/home/$USER/.sonarrtemp.db"
+tempdb="$homedir/.sonarrtemp.db"
 sqlite3 $tempdb "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE EpisodeList (Showname TEXT,Season INTEGER,Episode INTEGER,title TEXT,Airdate TEXT);CREATE TABLE SeriesStatus (Showname TEXT,Ended INTEGER);INSERT INTO EpisodeList SELECT B.Title, A.seasonnumber, A.episodenumber, A.title, A.airdate FROM nzbdrone.Episodes A LEFT JOIN nzbdrone.Series B ON A.SeriesID = B.Id;INSERT INTO SeriesStatus SELECT Title,Status FROM nzbdrone.Series;"
 
 # Build array of changed episodes
