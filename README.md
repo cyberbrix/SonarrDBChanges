@@ -24,57 +24,102 @@ SQLite - https://www.sqlite.org/index.html/
 apt-get install sqlite3
 ```
 
-Note: The code isn't perfect and always improving. If you have input, please let me know here.
+## Current Issues
+```
+The column width for each section is set by the first line displayed.
+
+The other option I'm exploring is to list episode by episode, only mentioning the different fields, but this would take a lot more looping and sql queries.
+
+
+The code isn't perfect and always improving. If you have input, please let me know here.
+```
+
 
 ## Output Examples
+```
+
+*** Deleted Episodes ***
+
+Show                                  Season      Episode     Title       Airdate
+
+\------------------------------------  ----------  ----------  ----------  ----------
+
+DC Super Hero Girls: Super Hero High  5           8           Hackgirl    2018-09-20
+
+
+*** New Episodes ***
+
+Show                Season      Episode     Title           Airdate
+
+\------------------  ----------  ----------  --------------  ----------
+
+American Housewife  5           7           Under Pressure  2021-01-27
+
+The Goldbergs (201  8           9           Cocoon          2021-01-27
+
 
 *** Previous Episode Information ***
 
-Showname       Season      Episode     title                                                                        Airdate
+Show             Season      Episode     Title       Airdate
 
--------------  ----------  ----------  ---------------------------------------------------------------------------  ----------
+\---------------  ----------  ----------  ----------  ----------
 
-Cosmos (2014)  0           1           Celebrating Carl Sagan: A Selection from the Library of Congress Dedication  2014-06-10
+Carmen Sandiego  4           1           TBA         2021-01-15
 
-Cosmos (2014)  0           2           Cosmos: A Spacetime Odyssey at Comic-Con 2013                                
+Carmen Sandiego  4           2           TBA         2021-01-15
+
+Carmen Sandiego  4           3           TBA         2021-01-15
+
+Family Guy       19          10          Fecal Matt  2021-02-14
+
+Law & Order: Sp  22          5           Turn Me On  2021-01-14
+
 
 *** Current Episode Information ***
+Show             Season      Episode     Title                      Airdate
+\---------------  ----------  ----------  -------------------------  ----------
+Carmen Sandiego  4           1           The Beijing Bullion Caper  2021-01-15
 
-Showname       Season      Episode     title                                                                        Airdate
+Carmen Sandiego  4           2           The Big Bad Ivy Caper      2021-01-15
 
--------------  ----------  ----------  ---------------------------------------------------------------------------  ----------
+Carmen Sandiego  4           3           The Robo Caper             2021-01-15
 
-Cosmos (2014)  0           1           Celebrating Carl Sagan: A Selection from the Library of Congress Dedication  2014-06-10
+Family Guy       19          10          Fecal Matters              2021-01-17
 
-Cosmos (2014)  0           2           Cosmos: A Spacetime Odyssey at Comic-Con 2013                                2014-06-10
-
-Cosmos (2014)  0           3           Cosmos: A Spacetime Odyssey - The Voyage Continues                           2014-06-10
-
-Cosmos (2014)  0           4           Cosmos: A Spacetime Odyssey - The Cosmic Calendar                            2014-06-10
-
+Law & Order: Sp  22          5           Turn Me On, Take Me Priva  2021-01-14
 
 
-*** Previous Series Information ***
 
-Showname    Ended
+*** Deleted Series ***
 
-11.22.63    0
+Showname        Status
 
-Breaking B  0
+\--------------  ----------
 
-*** Current Series Information ***
+Schitt's Creek  Ended
 
-Showname    Ended
 
-11.22.63    1
+*** New Series ***
 
-Arrested D  1
+Showname           Status
 
-Batman Bey  1
+\----------         ----------
 
-Batman: Th  1
+Perry Mason (2020) Ongoing
 
-Big Little  1
 
-Breaking B  1
+*** Modified Series - Previous  ***
+Showname         Status
+\---------------  ----------
+
+Carmen Sandiego  Ongoing
+
+*** Modified Series - Current ***
+
+Showname         Status
+
+\---------------  ----------
+
+Carmen Sandiego  Ended
+
 

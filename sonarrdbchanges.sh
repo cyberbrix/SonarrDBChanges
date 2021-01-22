@@ -204,10 +204,10 @@ fi
 # if series state changes found, output current and previous information
 if [ -n "$updatedseriesarray" ]
 then
-  echo -e "\n*** Previous State  ***"
+  echo -e "\n*** Modified Series - Previous ***"
   sqlite3 -column -header $comparisondb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($updatedseriesarray);"
   echo ""
-  echo "*** Current State ***"
+  echo "*** Modified Series - Current ***"
   sqlite3 -column -header $tempdb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($updatedseriesarray);"
   serieschanges=1
 fi
