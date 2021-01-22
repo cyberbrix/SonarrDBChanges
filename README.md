@@ -48,46 +48,28 @@ DC Super Hero Girls: Super Hero High  5           8           Hackgirl    2018-0
 *** New Episodes ***
 
 Show                Season      Episode     Title           Airdate
-
 ------------------  ----------  ----------  --------------  ----------
-
 American Housewife  5           7           Under Pressure  2021-01-27
-
 The Goldbergs (201  8           9           Cocoon          2021-01-27
 
-
 *** Previous Episode Information ***
-
 Show             Season      Episode     Title       Airdate
-
 ---------------  ----------  ----------  ----------  ----------
-
 Carmen Sandiego  4           1           TBA         2021-01-15
-
 Carmen Sandiego  4           2           TBA         2021-01-15
-
 Carmen Sandiego  4           3           TBA         2021-01-15
-
 Family Guy       19          10          Fecal Matt  2021-02-14
-
 Law & Order: Sp  22          5           Turn Me On  2021-01-14
 
 
 *** Current Episode Information ***
 Show             Season      Episode     Title                      Airdate
-
 ---------------  ----------  ----------  -------------------------  ----------
-
 Carmen Sandiego  4           1           The Beijing Bullion Caper  2021-01-15
-
 Carmen Sandiego  4           2           The Big Bad Ivy Caper      2021-01-15
-
 Carmen Sandiego  4           3           The Robo Caper             2021-01-15
-
 Family Guy       19          10          Fecal Matters              2021-01-17
-
 Law & Order: Sp  22          5           Turn Me On, Take Me Priva  2021-01-14
-
 
 
 *** Deleted Series ***
