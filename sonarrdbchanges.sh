@@ -1,5 +1,6 @@
 #!/bin/bash
 # This script will show changes in the sonarr database. Tested with v2. Should work with v3
+# v 0.9
 
 #check if sqlite3 installed
 if ! type sqlite3 &> /dev/null
@@ -129,10 +130,10 @@ fi
 # if episode changes found, output current and previous information
 if [ -n "$updatedarray" ]
 then
-  echo -e "\n*** Previous Episode Information ***"
+  echo -e "\n*** Modified Episodes - Original ***"
   sqlite3 -column -header $comparisondb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($updatedarray) ORDER By Show,A.Season,A.Episode;"
   echo ""
-  echo "*** Current Episode Information ***"
+  echo "*** Modified Episodes - Current ***"
   sqlite3 -column -header $tempdb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($updatedarray) ORDER By Show,A.Season,A.Episode;"
   episodechanges=1
 fi
