@@ -51,7 +51,7 @@ DC Super Hero Girls: Super Hero High  5           8           Hackgirl    2018-0
 
 Show                Season      Episode     Title           Airdate
 
-\------------------  ----------  ----------  --------------  ----------
+------------------  ----------  ----------  --------------  ----------
 
 American Housewife  5           7           Under Pressure  2021-01-27
 
@@ -62,7 +62,7 @@ The Goldbergs (201  8           9           Cocoon          2021-01-27
 
 Show             Season      Episode     Title       Airdate
 
-\---------------  ----------  ----------  ----------  ----------
+---------------  ----------  ----------  ----------  ----------
 
 Carmen Sandiego  4           1           TBA         2021-01-15
 
@@ -77,7 +77,9 @@ Law & Order: Sp  22          5           Turn Me On  2021-01-14
 
 *** Current Episode Information ***
 Show             Season      Episode     Title                      Airdate
-\---------------  ----------  ----------  -------------------------  ----------
+
+---------------  ----------  ----------  -------------------------  ----------
+
 Carmen Sandiego  4           1           The Beijing Bullion Caper  2021-01-15
 
 Carmen Sandiego  4           2           The Big Bad Ivy Caper      2021-01-15
@@ -94,7 +96,7 @@ Law & Order: Sp  22          5           Turn Me On, Take Me Priva  2021-01-14
 
 Showname        Status
 
-\--------------  ----------
+--------------  ----------
 
 Schitt's Creek  Ended
 
@@ -103,14 +105,14 @@ Schitt's Creek  Ended
 
 Showname           Status
 
-\----------         ----------
+ ----------         ----------
 
 Perry Mason (2020) Ongoing
 
 
 *** Modified Series - Previous  ***
 Showname         Status
-\---------------  ----------
+ ---------------  ----------
 
 Carmen Sandiego  Ongoing
 
@@ -118,7 +120,7 @@ Carmen Sandiego  Ongoing
 
 Showname         Status
 
-\---------------  ----------
+ ---------------  ----------
 
 Carmen Sandiego  Ended
 
