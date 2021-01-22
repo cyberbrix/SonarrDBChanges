@@ -41,9 +41,7 @@ The code isn't perfect and always improving. If you have input, please let me kn
 *** Deleted Episodes ***
 
 Show                                  Season      Episode     Title       Airdate
-
 ------------------------------------  ----------  ----------  ----------  ----------
-
 DC Super Hero Girls: Super Hero High  5           8           Hackgirl    2018-09-20
 
 
