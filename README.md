@@ -39,14 +39,12 @@ The code isn't perfect and always improving. If you have input, please let me kn
 ```
 
 *** Deleted Episodes ***
-
 Show                                  Season      Episode     Title       Airdate
 ------------------------------------  ----------  ----------  ----------  ----------
 DC Super Hero Girls: Super Hero High  5           8           Hackgirl    2018-09-20
 
 
 *** New Episodes ***
-
 Show                Season      Episode     Title           Airdate
 ------------------  ----------  ----------  --------------  ----------
 American Housewife  5           7           Under Pressure  2021-01-27
@@ -73,35 +71,24 @@ Law & Order: Sp  22          5           Turn Me On, Take Me Priva  2021-01-14
 
 
 *** Deleted Series ***
-
 Showname        Status
-
 --------------  ----------
-
 Schitt's Creek  Ended
 
 
 *** New Series ***
-
 Showname           Status
-
- ----------         ----------
-
+----------         ----------
 Perry Mason (2020) Ongoing
 
 
 *** Modified Series - Previous  ***
 Showname         Status
- ---------------  ----------
-
+---------------  ----------
 Carmen Sandiego  Ongoing
 
+
 *** Modified Series - Current ***
-
 Showname         Status
-
- ---------------  ----------
-
+---------------  ----------
 Carmen Sandiego  Ended
-
-
