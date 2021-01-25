@@ -28,6 +28,8 @@ then
   exit 1
 fi
 
+echo "Sonarr DB path: $sonarrdbpath"
+
 # Test if db tables are accessable
 sonarrtables=`sqlite3 "$sonarrdbpath" ".tables"`
 if [[ $sonarrtables != *"Episodes"* ]] || [[ $sonarrtables != *"Series"* ]]
@@ -48,9 +50,9 @@ fi
 
 
 # Create backups for debugging
-today=`date --date=today +%Y-%m-%d`
-cp $comparisondb "$homedir/nzbdonebackup/sonarrepisodeinfo-$today.db"
-cp $sonarrdbpath "$homedir/nzbdonebackup/sonarrdb-$today.db"
+#today=`date --date=today +%Y-%m-%d`
+#cp $comparisondb "$homedir/nzbdonebackup/sonarrepisodeinfo-$today.db"
+#cp $sonarrdbpath "$homedir/nzbdonebackup/sonarrdb-$today.db"
 
 # Create smaller database of current data to compare
 tempdb="$homedir/.sonarrtemp.db"
@@ -62,6 +64,54 @@ sqlite3 $tempdb "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE Epis
 # Changes from previous db to current db
 episodedbdiffs=`sqldiff --table EpisodeList $comparisondb $tempdb`
 seriesdbdiffs=`sqldiff --table SeriesStatus $comparisondb $tempdb`
+
+# Detect series changes
+while read -r series ; do
+  # Detect action type and retrieve seriesid
+  saction=${series%% *}
+  case $saction in
+    "") continue;;
+    DELETE)
+      seriesid=${series##*=}
+      seriesid=${seriesid/%;/}
+      # build array of seriesids for deleted items
+      if [ -z "$deletedseriesarray" ]
+      then
+        deletedseriesarray=$seriesid
+      else
+        deletedseriesarray="$deletedseriesarray,$seriesid"
+      fi
+    ;;
+    UPDATE)
+      seriesid=${series##*=}
+      seriesid=${seriesid/%;/}
+      # build array of seriesids for updated items
+      if [ -z "$updatedseriesarray" ]
+      then
+        updatedseriesarray=$seriesid
+      else
+        updatedseriesarray="$updatedseriesarray,$seriesid"
+      fi
+    ;;
+    INSERT)
+      seriesid=${series##*VALUES(}
+      seriesid=${seriesid%%,*}
+      # build array of seriesids for new items
+      if [ -z "$newseriesarray" ]
+      then
+        newseriesarray=$seriesid
+      else
+        newseriesarray="$newseriesarray,$seriesid"
+      fi
+    ;;
+    *)
+      echo "Unable to process action: $saction"
+      continue
+    ;;
+  esac
+done <<<$seriesdbdiffs
+
+
 
 # detect episode changes
 while read -r line ; do
@@ -138,52 +188,6 @@ then
   episodechanges=1
 fi
 
-
-# Detect series changes
-while read -r series ; do
-  # Detect action type and retrieve seriesid
-  saction=${series%% *}
-  case $saction in
-    "") continue;;
-    DELETE)
-      seriesid=${series##*=}
-      seriesid=${seriesid/%;/}
-      # build array of seriesids for deleted items
-      if [ -z "$deletedseriesarray" ]
-      then
-        deletedseriesarray=$seriesid
-      else
-        deletedseriesarray="$deletedseriesarray,$seriesid"
-      fi
-    ;;
-    UPDATE)
-      seriesid=${series##*=}
-      seriesid=${seriesid/%;/}
-      # build array of seriesids for updated items
-      if [ -z "$updatedseriesarray" ]
-      then
-        updatedseriesarray=$seriesid
-      else
-        updatedseriesarray="$updatedseriesarray,$seriesid"
-      fi
-    ;;
-    INSERT)
-      seriesid=${series##*VALUES(}
-      seriesid=${seriesid%%,*}
-      # build array of seriesids for new items
-      if [ -z "$newseriesarray" ]
-      then
-        newseriesarray=$seriesid
-      else
-        newseriesarray="$newseriesarray,$seriesid"
-      fi
-    ;;
-    *)
-      echo "Unable to process action: $saction"
-      continue
-    ;;
-  esac
-done <<<$seriesdbdiffs
 
 # if series deletions found, display information
 if [ -n "$deletedseriesarray" ]
