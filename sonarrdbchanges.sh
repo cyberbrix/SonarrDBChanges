@@ -65,8 +65,19 @@ sqlite3 $tempdb "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE Epis
 episodedbdiffs=`sqldiff --table EpisodeList $comparisondb $tempdb`
 seriesdbdiffs=`sqldiff --table SeriesStatus $comparisondb $tempdb`
 
+# create arrays used for data processing
+newseriesidarray=() # seriesID for newly added series
+newseriesarray=() # series which have been created - rowid, not seriesid
+deletedseriesarray=() # series which have been deleted
+updatedseriesarray=() # series which have been updated
+deletedepisodearray=() # array for deleted episodes
+updatedepisodearray=() # array for updated episodes
+newepisodearray=() # array for new episodes
+updatedmaybedeletedarray=() # array for updated episodes which may be deleted
+
 # Detect series changes
-while read -r series ; do
+while read -r series
+do
   # Detect action type and retrieve seriesid
   saction=${series%% *}
   case $saction in
@@ -75,46 +86,30 @@ while read -r series ; do
       seriesid=${series##*=}
       seriesid=${seriesid/%;/}
       # build array of seriesids for deleted items
-      if [ -z "$deletedseriesarray" ]
-      then
-        deletedseriesarray=$seriesid
-      else
-        deletedseriesarray="$deletedseriesarray,$seriesid"
-      fi
+      deletedseriesarray+=($seriesid)
     ;;
     UPDATE)
       seriesid=${series##*=}
       seriesid=${seriesid/%;/}
-      # build array of seriesids for updated items
-      if [ -z "$updatedseriesarray" ]
-      then
-        updatedseriesarray=$seriesid
-      else
-        updatedseriesarray="$updatedseriesarray,$seriesid"
-      fi
+      updatedseriesarray+=($seriesid)
     ;;
     INSERT)
       seriesid=${series##*VALUES(}
-      seriesid=${seriesid%%,*}
-      # build array of seriesids for new items
-      if [ -z "$newseriesarray" ]
-      then
-        newseriesarray=$seriesid
-      else
-        newseriesarray="$newseriesarray,$seriesid"
-      fi
+      seriesidnum=$(echo $seriesid | cut -d',' -f2)
+      seriesrowid=$(echo $seriesid | cut -d',' -f1)
+      newseriesarray+=($seriesrowid)
+      newseriesidarray+=($seriesidnum)
     ;;
     *)
-      echo "Unable to process action: $saction"
+      echo "Unable to process series action: $saction"
       continue
     ;;
   esac
 done <<<$seriesdbdiffs
 
-
-
-# detect episode changes
-while read -r line ; do
+# detect episodes changes
+while read -r line 
+do
   # Detect action type and retrieve rowid
   action=${line%% *}
   case $action in
@@ -123,74 +118,183 @@ while read -r line ; do
       rowid=${line##*=}
       rowid=${rowid/%;/}
       # build array of rowids for deleted items
-      if [ -z "$deletedarray" ]
-      then
-        deletedarray=$rowid
-      else
-        deletedarray="$deletedarray,$rowid"
-      fi
+      deletedepisodearray+=($rowid)
     ;;
     UPDATE)
       rowid=${line##*=}
       rowid=${rowid/%;/}
       # build array of rowids for updated items
-      if [ -z "$updatedarray" ]
-      then
-        updatedarray=$rowid
-      else
-        updatedarray="$updatedarray,$rowid"
-      fi
+      updatedepisodearray+=($rowid)
     ;;
     INSERT)
       rowid=${line##*VALUES(}
+      episodeseriesid=$(echo $rowid | cut -d',' -f3)
       rowid=${rowid%%,*}
+      for epnum in "${newseriesidarray[@]}"
+      do
+        if [[ "$episodeseriesid" == "$epnum" ]] 
+        then
+          continue 2
+        fi
+      done
+      
       # build array of rowids for new items
-      if [ -z "$newarray" ]
-      then
-        newarray=$rowid
-      else
-        newarray="$newarray,$rowid"
-      fi
+      newepisodearray+=($rowid)
     ;;
     *)
-      echo "Unable to process action: $action"
+      echo "Unable to process episode action: $action"
       continue
     ;;
   esac
-done <<<$episodedbdiffs
+done < <(sqldiff --table EpisodeList $comparisondb $tempdb | grep -iv "^UPDATE EpisodeList SET Id")
+
+# List of episode id which already exist, just a different row
+existingepisodeids=$(sqlite3 $comparisondb "select id FROM EpisodeList;")
+
+# find episodes which don't current exist but replacing an existing db entry
+while read -r updateline
+do
+  # detect the id of the episode
+  updatelinetrimmedprefix=${updateline#*SET Id=}
+  updatelineid=${updatelinetrimmedprefix%%,*}
+  rowid=${updateline##*=}
+  rowid=${rowid/%;/}
+  
+  # if update line is replacing a full show, build an array to check if the replaced show is deleted or moved
+  if  echo "$updatelinetrimmedprefix" | grep -iq "SeriesID"
+  then
+    updatedmaybedeletedarray+=($rowid)
+  fi
+   
+  # Check if it is in the current list of episodes. If not, it is new
+  if [[ $existingepisodeids =~ [[:space:]]$updatelineid[[:space:]] ]]
+  then
+    : # take no actions
+  else
+    newepisodearray+=($rowid)
+  fi
+done < <(sqldiff --table EpisodeList $comparisondb $tempdb | grep -i "^UPDATE EpisodeList SET Id")
+
+
+if [[ $updatedmaybedeletedarray != '' ]]
+then
+  updatedmaybedeletedarray=$(echo ${updatedmaybedeletedarray[@]} | sed 's/ /,/g')
+  while read -r episodetocheck
+  do
+    # Parse current rowid, episodeid
+    currentrowid=$(echo $episodetocheck | cut -d'|' -f1)
+    episodeidtocheck=$(echo $episodetocheck | cut -d'|' -f2)
+    seriesidtocheck=$(echo $episodetocheck | cut -d'|' -f3)
+    
+    # check for the episode in the new db. if it exists, do nothing, if it 	
+    if [[ $(sqlite3 $tempdb "SELECT EXISTS(SELECT * FROM EpisodeList WHERE ID=$episodeidtocheck);") -eq 1 ]]
+    then
+      continue
+    fi
+    
+    deletedepisodearray+=($currentrowid)
+  done < <(sqlite3 $comparisondb "SELECT rowid,id,SeriesID From Episodelist WHERE rowid IN ($updatedmaybedeletedarray);")
+fi
+
+
+
+# Convert Arrays to comma separated list for sql usage
+OIFS=$IFS
+IFS=','
+deletedepisodearray=${deletedepisodearray[*]}
+newepisodearray=${newepisodearray[*]}
+updatedepisodearray=${updatedepisodearray[*]}
+deletedseriesarray=${deletedseriesarray[*]}
+updatedseriesarray=${updatedseriesarray[*]}
+newseriesarray=${newseriesarray[*]}
+updatedmaybedeletedarray=${updatedmaybedeletedarray[*]}
+IFS=$OIFS
 
 
 
 # if episode deletions found, display information
-if [ -n "$deletedarray" ]
-then
+if [[ $deletedepisodearray != '' ]]
+then  
   echo -e "\n*** Deleted Episodes ***"
-  sqlite3 -column -header $comparisondb "SELECT B.Showname As Show, A.Season, A.Episode, A.title,A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($deletedarray) ORDER By Show,A.Season,A.Episode;"
+  sqlite3 -column -header $comparisondb "SELECT B.Showname As Show, A.Season, A.Episode, A.title,A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($deletedepisodearray) ORDER By Show,A.Season,A.Episode;"
   episodechanges=1
 fi
 
 # if new episodes found, display information
-if [ -n "$newarray" ]
+if [[ $newepisodearray != '' ]]
 then
   echo -e "\n*** New Episodes ***"
-  sqlite3 -column -header $tempdb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($newarray) ORDER By Show,A.Season,A.Episode;"
+  sqlite3 -column -header $tempdb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($newepisodearray) ORDER By Show,A.Season,A.Episode;"
   episodechanges=1
 fi
 
+
+
 # if episode changes found, output current and previous information
-if [ -n "$updatedarray" ]
+if [[ $updatedepisodearray != '' ]]
 then
-  echo -e "\n*** Modified Episodes - Original ***"
-  sqlite3 -column -header $comparisondb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($updatedarray) ORDER By Show,A.Season,A.Episode;"
+  OIFS=$IFS;
+  IFS="|";
+  while read -r sqlepisodeinfo
+  do
+    # create array
+    changedepisode=($sqlepisodeinfo);
+  
+    # check if expected number of tokens
+    if [[ ${#changedepisode[@]} != 9 ]]
+    then 
+      echo "Wrong number of items in: $sqlepisodeinfo"
+      continue
+    fi
+
+    # set tokens as variables for ease of use
+    showname=${changedepisode[0]}
+    showoldseason=${changedepisode[1]}
+    showoldepisode=${changedepisode[2]}
+    showoldtitle=${changedepisode[3]}
+    showoldairdate=${changedepisode[4]}
+    shownewseason=${changedepisode[5]}
+    shownewepisode=${changedepisode[6]}
+    shownewtitle=${changedepisode[7]}
+    shownewairdate=${changedepisode[8]}
+   
+    echo ""
+    # checks if previously processed show is the same. skips the show name if so
+    if [[ "$previousshowname" != "$showname" ]]
+    then
+      echo ""
+      echo "======================"
+      echo "$showname"
+      echo "--------------"
+    fi
+  
+    # Checks if the season or episode changed 
+    if [[ "$showoldseason" != "$shownewseason" ]] || [[ "$showoldepisode" != "$shownewepisode" ]]
+    then
+      echo "S:$showoldseason E:$showoldepisode => S:$shownewseason E:$shownewepisode"
+    else
+      echo "S:$showoldseason E:$showoldepisode"
+    fi
+    
+    # Checks if the episode title has changed
+    [[ "$showoldtitle" != "$shownewtitle" ]] && echo "Title: $showoldtitle => $shownewtitle"
+    
+    # checks if the airdate has changed
+    [[ "$showoldairdate" != "$shownewairdate" ]] && echo "Airdate: $showoldairdate => $shownewairdate"
+  
+    # sets current show name as previous
+    previousshowname=$showname
+
+  done < <(sqlite3 $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata';SELECT B.Showname, A.Season, A.Episode, A.title,A.airdate,C.Season,C.Episode,C.title,C.airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID JOIN newdata.episodelist C ON A.rowid = C.rowid  WHERE A.rowid IN ($updatedepisodearray) ORDER By B.Showname,A.Season,A.Episode;")
   echo ""
-  echo "*** Modified Episodes - Current ***"
-  sqlite3 -column -header $tempdb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($updatedarray) ORDER By Show,A.Season,A.Episode;"
+  echo ""
+  IFS=$OIFS
   episodechanges=1
 fi
 
 
 # if series deletions found, display information
-if [ -n "$deletedseriesarray" ]
+if [[ $deletedseriesarray != '' ]]
 then
   echo -e "\n*** Deleted Series ***"
   sqlite3 -column -header $comparisondb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($deletedseriesarray);"
@@ -198,7 +302,7 @@ then
 fi
 
 # if new series found, display information
-if [ -n "$newseriesarray" ]
+if [[ $newseriesarray != '' ]]
 then
   echo -e "\n*** New Series ***"
   sqlite3 -column -header $tempdb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($newseriesarray);"
@@ -206,13 +310,10 @@ then
 fi
 
 # if series state changes found, output current and previous information
-if [ -n "$updatedseriesarray" ]
+#if [ -n "$updatedseriesarray" ]
+if [[ $updatedseriesarray != '' ]]
 then
-  echo -e "\n*** Modified Series - Previous ***"
-  sqlite3 -column -header $comparisondb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($updatedseriesarray);"
-  echo ""
-  echo "*** Modified Series - Current ***"
-  sqlite3 -column -header $tempdb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($updatedseriesarray);"
+  sqlite3 -header -column $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT A.Showname,CASE A.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Previous Status',CASE B.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Current Status' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriesarray) ORDER By A.Showname;"
   serieschanges=1
 fi
 
