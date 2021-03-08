@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script will show changes in the sonarr database. Tested with v2. Should work with v3
-# v 0.9
+# v 1.0
 
 #check if sqlite3 installed
 if ! type sqlite3 &> /dev/null
@@ -17,8 +17,6 @@ fi
 
 # Expand homepath to avoid variables. sqlite commands and cron can have issue with it
 eval homedir=~
-
-
 
 # Find the sonarr db
 sonarrdbpath=`find / -type f \( -name "sonarr.db" -o -name "nzbdrone.db" \) -printf '%T+ %p\n'  2>/dev/null | grep -iv "find:/radarr" | sort -r | head -1 | cut -d' ' -f2-`
@@ -48,11 +46,6 @@ then
   exit 0
 fi
 
-
-# Create backups for debugging
-#today=`date --date=today +%Y-%m-%d`
-#cp $comparisondb "$homedir/nzbdonebackup/sonarrepisodeinfo-$today.db"
-#cp $sonarrdbpath "$homedir/nzbdonebackup/sonarrdb-$today.db"
 
 # Create smaller database of current data to compare
 tempdb="$homedir/.sonarrtemp.db"
@@ -93,7 +86,6 @@ do
     UPDATE)
       seriesid=${series##*=}
       seriesid=${seriesid/%;/}
-      #updatedseriesarray+=($seriesid)
       if  echo "$series" | grep -iq "SET Showname"
       then
         updatedseriestitlearray+=($seriesid)
@@ -115,7 +107,6 @@ do
       continue
     ;;
   esac
-#done <<<$seriesdbdiffs
 done < <(sqldiff --table SeriesStatus $comparisondb $tempdb | grep -iv "UPDATE SeriesStatus SET SeriesID")
 
 # List of series ids which already exist, just a different row
@@ -281,7 +272,6 @@ then
   sqlite3 -column -header $tempdb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($newepisodearray) ORDER By Show,A.Season,A.Episode;"
   episodechanges=1
 fi
-
 
 
 # if episode changes found, output current and previous information
