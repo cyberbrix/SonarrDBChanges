@@ -70,12 +70,14 @@ newseriesidarray=() # seriesID for newly added series
 newseriesarray=() # series which have been created - rowid, not seriesid
 deletedseriesarray=() # series which have been deleted
 updatedseriesarray=() # series which have been updated
+updatedseriestitlearray=() # series which have been updated
 deletedepisodearray=() # array for deleted episodes
 updatedepisodearray=() # array for updated episodes
 newepisodearray=() # array for new episodes
 updatedmaybedeletedarray=() # array for updated episodes which may be deleted
+updatedseriesmaybedeletedarray=() # array for updated episodes which may be deleted
 
-# Detect series changes
+# Detect series changes - skipping entire line rewrite
 while read -r series
 do
   # Detect action type and retrieve seriesid
@@ -91,7 +93,15 @@ do
     UPDATE)
       seriesid=${series##*=}
       seriesid=${seriesid/%;/}
-      updatedseriesarray+=($seriesid)
+      #updatedseriesarray+=($seriesid)
+      if  echo "$series" | grep -iq "SET Showname"
+      then
+        updatedseriestitlearray+=($seriesid)
+        continue
+      else
+        updatedseriesarray+=($seriesid)
+        continue
+      fi
     ;;
     INSERT)
       seriesid=${series##*VALUES(}
@@ -105,7 +115,50 @@ do
       continue
     ;;
   esac
-done <<<$seriesdbdiffs
+#done <<<$seriesdbdiffs
+done < <(sqldiff --table SeriesStatus $comparisondb $tempdb | grep -iv "UPDATE SeriesStatus SET SeriesID")
+
+# List of series ids which already exist, just a different row
+existingseriesids=$(sqlite3 $comparisondb "select SeriesID FROM SeriesStatus;")
+
+# find series which don't current exist but replacing an existing db entry
+while read -r updateseries
+do
+  # detect the id of the episode
+  updateseriestrimmedprefix=${updateseries#*SET SeriesID=}
+  updateseriesid=${updateseriestrimmedprefix%%,*}
+  seriesid=${updateseriestrimmedprefix##*=}
+  seriesid=${seriesid/%;/}
+
+  updatedseriesmaybedeletedarray+=($seriesid)
+
+  # Check if it is in the current list of episodes. If not, it is new
+  if [[ $existingseriesids =~ [[:space:]]$updateseriesid[[:space:]] ]]
+  then
+    : # take no actions
+  else
+    newepisodearray+=($seriesid)
+  fi
+done < <(sqldiff --table SeriesStatus $comparisondb $tempdb | grep -i "^UPDATE SeriesStatus SET SeriesID")
+
+if [[ $updatedseriesmaybedeletedarray != '' ]]
+then
+  updatedseriesmaybedeletedarray=$(echo ${updatedseriesmaybedeletedarray[@]} | sed 's/ /,/g')
+  while read -r seriestocheck
+  do
+    # Parse current rowid, episodeid
+    currentrowid=$(echo $seriestocheck | cut -d'|' -f1)
+    seriesidtocheck=$(echo $seriestocheck | cut -d'|' -f2)
+
+    # check for the episode in the new db. if it exists, do nothing, if it
+    if [[ $(sqlite3 $tempdb "SELECT EXISTS(SELECT * FROM SeriesStatus WHERE SeriesID=$seriesidtocheck);") -eq 1 ]]
+    then
+      continue
+    fi
+
+    deletedseriesarray+=($currentrowid)
+  done < <(sqlite3 $comparisondb "SELECT rowid,SeriesID From SeriesStatus WHERE rowid IN ($updatedseriesmaybedeletedarray);")
+fi
 
 # detect episodes changes
 while read -r line 
@@ -208,6 +261,7 @@ deletedseriesarray=${deletedseriesarray[*]}
 updatedseriesarray=${updatedseriesarray[*]}
 newseriesarray=${newseriesarray[*]}
 updatedmaybedeletedarray=${updatedmaybedeletedarray[*]}
+updatedseriestitlearray=${updatedseriestitlearray[*]}
 IFS=$OIFS
 
 
@@ -309,11 +363,19 @@ then
   serieschanges=1
 fi
 
+# if series title has changed
+if [[ $updatedseriestitlearray != '' ]]
+then
+  echo -e "\n*** Series Name Changes ***"
+  sqlite3 -header -column $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT A.Showname As 'Prevous Showname',B.showname AS 'Current Showname' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriestitlearray) ORDER By A.Showname;"
+  serieschanges=1
+fi
+
 # if series state changes found, output current and previous information
-#if [ -n "$updatedseriesarray" ]
 if [[ $updatedseriesarray != '' ]]
 then
-  sqlite3 -header -column $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT A.Showname,CASE A.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Previous Status',CASE B.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Current Status' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriesarray) ORDER By A.Showname;"
+  echo -e "\n*** Series Status Changes ***"
+  sqlite3 -header -column $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT B.Showname,CASE A.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Previous Status',CASE B.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Current Status' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriesarray) ORDER By A.Showname;"
   serieschanges=1
 fi
 
