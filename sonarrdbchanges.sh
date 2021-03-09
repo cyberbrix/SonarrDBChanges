@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script will show changes in the sonarr database. Tested with v2. Should work with v3
-# v 1.0
+# v 1.1
 
 #check if sqlite3 installed
 if ! type sqlite3 &> /dev/null
@@ -19,7 +19,7 @@ fi
 eval homedir=~
 
 # Find the sonarr db
-sonarrdbpath=`find / -type f \( -name "sonarr.db" -o -name "nzbdrone.db" \) -printf '%T+ %p\n'  2>/dev/null | grep -iv "find:/radarr" | sort -r | head -1 | cut -d' ' -f2-`
+sonarrdbpath=$(find / -type f \( -name "sonarr.db" -o -name "nzbdrone.db" \) -printf '%T+ %p\n'  2>/dev/null | grep -iv "find:/radarr" | sort -r | head -1 | cut -d' ' -f2-)
 if [[ ! -r "$sonarrdbpath" ]]
 then
   echo -e "\nnzbdone.db is not found or accessible"
@@ -29,7 +29,7 @@ fi
 echo "Sonarr DB path: $sonarrdbpath"
 
 # Test if db tables are accessable
-sonarrtables=`sqlite3 "$sonarrdbpath" ".tables"`
+sonarrtables=$(sqlite3 "$sonarrdbpath" ".tables")
 if [[ $sonarrtables != *"Episodes"* ]] || [[ $sonarrtables != *"Series"* ]]
 then
   echo -e "\nThe needed tables were not found (Episodes and Series). $sonarrdbpath may not be the right database"
@@ -41,7 +41,7 @@ comparisondb="$homedir/.sonarrepisodeinfo.db"
 if [[ ! -r "$comparisondb" ]]
 then
   # no comparison needed, create the new db and exit
-  sqlite3 $comparisondb "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE EpisodeList (Id INTEGER, SeriesID INTEGER,Season INTEGER,Episode INTEGER,Title TEXT,Airdate TEXT);CREATE TABLE SeriesStatus (SeriesID INTEGER, Showname TEXT,Ended INTEGER);INSERT INTO EpisodeList SELECT Id,SeriesID,SeasonNumber,EpisodeNumber,Title,Airdate FROM nzbdrone.Episodes;INSERT INTO SeriesStatus SELECT Id,Title,Status FROM nzbdrone.Series;"
+  sqlite3 "$comparisondb" "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE EpisodeList (Id INTEGER, SeriesID INTEGER,Season INTEGER,Episode INTEGER,Title TEXT,Airdate TEXT);CREATE TABLE SeriesStatus (SeriesID INTEGER, Showname TEXT,Ended INTEGER);INSERT INTO EpisodeList SELECT Id,SeriesID,SeasonNumber,EpisodeNumber,Title,Airdate FROM nzbdrone.Episodes;INSERT INTO SeriesStatus SELECT Id,Title,Status FROM nzbdrone.Series;"
   echo "Comparison DB created. Rerun script after Sonarr has changed."
   exit 0
 fi
@@ -51,12 +51,7 @@ fi
 tempdb="$homedir/.sonarrtemp.db"
 
 # new create smllaer db of current data
-sqlite3 $tempdb "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE EpisodeList (Id INTEGER, SeriesID INTEGER,Season INTEGER,Episode INTEGER,Title TEXT,Airdate TEXT);CREATE TABLE SeriesStatus (SeriesID INTEGER, Showname TEXT,Ended INTEGER);INSERT INTO EpisodeList SELECT Id,SeriesID,SeasonNumber,EpisodeNumber,Title,Airdate FROM nzbdrone.Episodes;INSERT INTO SeriesStatus SELECT Id,Title,Status FROM nzbdrone.Series;"
-
-
-# Changes from previous db to current db
-episodedbdiffs=`sqldiff --table EpisodeList $comparisondb $tempdb`
-seriesdbdiffs=`sqldiff --table SeriesStatus $comparisondb $tempdb`
+sqlite3 "$tempdb" "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE EpisodeList (Id INTEGER, SeriesID INTEGER,Season INTEGER,Episode INTEGER,Title TEXT,Airdate TEXT);CREATE TABLE SeriesStatus (SeriesID INTEGER, Showname TEXT,Ended INTEGER);INSERT INTO EpisodeList SELECT Id,SeriesID,SeasonNumber,EpisodeNumber,Title,Airdate FROM nzbdrone.Episodes;INSERT INTO SeriesStatus SELECT Id,Title,Status FROM nzbdrone.Series;"
 
 # create arrays used for data processing
 newseriesidarray=() # seriesID for newly added series
@@ -148,7 +143,7 @@ then
     fi
 
     deletedseriesarray+=($currentrowid)
-  done < <(sqlite3 $comparisondb "SELECT rowid,SeriesID From SeriesStatus WHERE rowid IN ($updatedseriesmaybedeletedarray);")
+  done < <(sqlite3 "$comparisondb" "SELECT rowid,SeriesID From SeriesStatus WHERE rowid IN ($updatedseriesmaybedeletedarray);")
 fi
 
 # detect episodes changes
@@ -190,10 +185,10 @@ do
       continue
     ;;
   esac
-done < <(sqldiff --table EpisodeList $comparisondb $tempdb | grep -iv "^UPDATE EpisodeList SET Id")
+done < <(sqldiff --table EpisodeList "$comparisondb" "$tempdb" | grep -iv "^UPDATE EpisodeList SET Id")
 
 # List of episode id which already exist, just a different row
-existingepisodeids=$(sqlite3 $comparisondb "select id FROM EpisodeList;")
+existingepisodeids=$(sqlite3 "$comparisondb" "select id FROM EpisodeList;")
 
 # find episodes which don't current exist but replacing an existing db entry
 while read -r updateline
@@ -217,7 +212,7 @@ do
   else
     newepisodearray+=($rowid)
   fi
-done < <(sqldiff --table EpisodeList $comparisondb $tempdb | grep -i "^UPDATE EpisodeList SET Id")
+done < <(sqldiff --table EpisodeList "$comparisondb" "$tempdb" | grep -i "^UPDATE EpisodeList SET Id")
 
 
 if [[ $updatedmaybedeletedarray != '' ]]
@@ -231,13 +226,13 @@ then
     seriesidtocheck=$(echo $episodetocheck | cut -d'|' -f3)
     
     # check for the episode in the new db. if it exists, do nothing, if it 	
-    if [[ $(sqlite3 $tempdb "SELECT EXISTS(SELECT * FROM EpisodeList WHERE ID=$episodeidtocheck);") -eq 1 ]]
+    if [[ $(sqlite3 "$tempdb" "SELECT EXISTS(SELECT * FROM EpisodeList WHERE ID=$episodeidtocheck);") -eq 1 ]]
     then
       continue
     fi
     
     deletedepisodearray+=($currentrowid)
-  done < <(sqlite3 $comparisondb "SELECT rowid,id,SeriesID From Episodelist WHERE rowid IN ($updatedmaybedeletedarray);")
+  done < <(sqlite3 "$comparisondb" "SELECT rowid,id,SeriesID From Episodelist WHERE rowid IN ($updatedmaybedeletedarray);")
 fi
 
 
@@ -261,7 +256,7 @@ IFS=$OIFS
 if [[ $deletedepisodearray != '' ]]
 then  
   echo -e "\n*** Deleted Episodes ***"
-  sqlite3 -column -header $comparisondb "SELECT B.Showname As Show, A.Season, A.Episode, A.title,A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($deletedepisodearray) ORDER By Show,A.Season,A.Episode;"
+  sqlite3 -column -header "$comparisondb" "SELECT B.Showname As Show, A.Season, A.Episode, A.title,A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($deletedepisodearray) ORDER By Show,A.Season,A.Episode;"
   episodechanges=1
 fi
 
@@ -269,7 +264,7 @@ fi
 if [[ $newepisodearray != '' ]]
 then
   echo -e "\n*** New Episodes ***"
-  sqlite3 -column -header $tempdb "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($newepisodearray) ORDER By Show,A.Season,A.Episode;"
+  sqlite3 -column -header "$tempdb" "SELECT B.Showname As Show, A.Season, A.Episode, A.title, A.Airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID WHERE A.rowid IN ($newepisodearray) ORDER By Show,A.Season,A.Episode;"
   episodechanges=1
 fi
 
@@ -329,7 +324,7 @@ then
     # sets current show name as previous
     previousshowname=$showname
 
-  done < <(sqlite3 $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata';SELECT B.Showname, A.Season, A.Episode, A.title,A.airdate,C.Season,C.Episode,C.title,C.airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID JOIN newdata.episodelist C ON A.rowid = C.rowid  WHERE A.rowid IN ($updatedepisodearray) ORDER By B.Showname,A.Season,A.Episode;")
+  done < <(sqlite3 "$comparisondb" "ATTACH DATABASE '$tempdb' AS 'newdata';SELECT B.Showname, A.Season, A.Episode, A.title,A.airdate,C.Season,C.Episode,C.title,C.airdate FROM EpisodeList A LEFT JOIN SeriesStatus B ON A.SeriesID = B.SeriesID JOIN newdata.episodelist C ON A.rowid = C.rowid  WHERE A.rowid IN ($updatedepisodearray) ORDER By B.Showname,A.Season,A.Episode;")
   echo ""
   echo ""
   IFS=$OIFS
@@ -341,7 +336,7 @@ fi
 if [[ $deletedseriesarray != '' ]]
 then
   echo -e "\n*** Deleted Series ***"
-  sqlite3 -column -header $comparisondb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($deletedseriesarray);"
+  sqlite3 -column -header "$comparisondb" "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($deletedseriesarray);"
   serieschanges=1
 fi
 
@@ -349,7 +344,7 @@ fi
 if [[ $newseriesarray != '' ]]
 then
   echo -e "\n*** New Series ***"
-  sqlite3 -column -header $tempdb "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($newseriesarray);"
+  sqlite3 -column -header "$tempdb" "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END Status from SeriesStatus WHERE rowid IN ($newseriesarray);"
   serieschanges=1
 fi
 
@@ -357,7 +352,7 @@ fi
 if [[ $updatedseriestitlearray != '' ]]
 then
   echo -e "\n*** Series Name Changes ***"
-  sqlite3 -header -column $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT A.Showname As 'Prevous Showname',B.showname AS 'Current Showname' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriestitlearray) ORDER By A.Showname;"
+  sqlite3 -header -column "$comparisondb" "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT A.Showname As 'Prevous Showname',B.showname AS 'Current Showname' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriestitlearray) ORDER By A.Showname;"
   serieschanges=1
 fi
 
@@ -365,7 +360,7 @@ fi
 if [[ $updatedseriesarray != '' ]]
 then
   echo -e "\n*** Series Status Changes ***"
-  sqlite3 -header -column $comparisondb "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT B.Showname,CASE A.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Previous Status',CASE B.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Current Status' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriesarray) ORDER By A.Showname;"
+  sqlite3 -header -column "$comparisondb" "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT B.Showname,CASE A.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Previous Status',CASE B.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' END 'Current Status' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriesarray) ORDER By A.Showname;"
   serieschanges=1
 fi
 
@@ -373,10 +368,10 @@ fi
 if [ -n "$episodechanges" ] || [ -n "$serieschanges" ]
 then
   # Replace current sonarr consolidated db with exported temp one.
-  mv  $tempdb $comparisondb
+  mv  "$tempdb" "$comparisondb"
 else
   echo "no changes"
-  rm $tempdb
+  rm "$tempdb"
 fi
 
 exit 0
