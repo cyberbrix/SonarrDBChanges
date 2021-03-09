@@ -102,10 +102,10 @@ do
       continue
     ;;
   esac
-done < <(sqldiff --table SeriesStatus $comparisondb $tempdb | grep -iv "UPDATE SeriesStatus SET SeriesID")
+done < <(sqldiff --table SeriesStatus "$comparisondb" "$tempdb" | grep -iv "UPDATE SeriesStatus SET SeriesID")
 
 # List of series ids which already exist, just a different row
-existingseriesids=$(sqlite3 $comparisondb "select SeriesID FROM SeriesStatus;")
+existingseriesids=$(sqlite3 "$comparisondb" "select SeriesID FROM SeriesStatus;")
 
 # find series which don't current exist but replacing an existing db entry
 while read -r updateseries
@@ -125,7 +125,7 @@ do
   else
     newepisodearray+=($seriesid)
   fi
-done < <(sqldiff --table SeriesStatus $comparisondb $tempdb | grep -i "^UPDATE SeriesStatus SET SeriesID")
+done < <(sqldiff --table SeriesStatus "$comparisondb" "$tempdb" | grep -i "^UPDATE SeriesStatus SET SeriesID")
 
 if [[ $updatedseriesmaybedeletedarray != '' ]]
 then
@@ -133,11 +133,11 @@ then
   while read -r seriestocheck
   do
     # Parse current rowid, episodeid
-    currentrowid=$(echo $seriestocheck | cut -d'|' -f1)
-    seriesidtocheck=$(echo $seriestocheck | cut -d'|' -f2)
+    currentrowid=$(echo "$seriestocheck" | cut -d'|' -f1)
+    seriesidtocheck=$(echo "$seriestocheck" | cut -d'|' -f2)
 
     # check for the episode in the new db. if it exists, do nothing, if it
-    if [[ $(sqlite3 $tempdb "SELECT EXISTS(SELECT * FROM SeriesStatus WHERE SeriesID=$seriesidtocheck);") -eq 1 ]]
+    if [[ $(sqlite3 "$tempdb" "SELECT EXISTS(SELECT * FROM SeriesStatus WHERE SeriesID=$seriesidtocheck);") -eq 1 ]]
     then
       continue
     fi
@@ -167,7 +167,7 @@ do
     ;;
     INSERT)
       rowid=${line##*VALUES(}
-      episodeseriesid=$(echo $rowid | cut -d',' -f3)
+      episodeseriesid=$(echo "$rowid" | cut -d',' -f3)
       rowid=${rowid%%,*}
       for epnum in "${newseriesidarray[@]}"
       do
@@ -221,8 +221,8 @@ then
   while read -r episodetocheck
   do
     # Parse current rowid, episodeid
-    currentrowid=$(echo $episodetocheck | cut -d'|' -f1)
-    episodeidtocheck=$(echo $episodetocheck | cut -d'|' -f2)
+    currentrowid=$(echo "$episodetocheck" | cut -d'|' -f1)
+    episodeidtocheck=$(echo "$episodetocheck" | cut -d'|' -f2)
     seriesidtocheck=$(echo $episodetocheck | cut -d'|' -f3)
     
     # check for the episode in the new db. if it exists, do nothing, if it 	
