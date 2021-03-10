@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script will show changes in the sonarr database. Works with v2 and v3
-# v 1.3
+# v 1.4
 
 #check if sqlite3 installed
 if ! type sqlite3 &> /dev/null
@@ -337,7 +337,7 @@ fi
 if [[ $deletedseriesarray != '' ]]
 then
   echo -e "\n*** Deleted Series ***"
-  sqlite3 -column -header "$comparisondb" "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Missing from TVDB' END Status from SeriesStatus WHERE rowid IN ($deletedseriesarray);"
+  sqlite3 -column -header "$comparisondb" "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Upcoming' WHEN '-1' THEN 'Deleted' END Status from SeriesStatus WHERE rowid IN ($deletedseriesarray);"
   serieschanges=1
 fi
 
@@ -345,7 +345,7 @@ fi
 if [[ $newseriesarray != '' ]]
 then
   echo -e "\n*** New Series ***"
-  sqlite3 -column -header "$tempdb" "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Missing from TVDB' END Status from SeriesStatus WHERE rowid IN ($newseriesarray);"
+  sqlite3 -column -header "$tempdb" "select Showname, CASE Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Upcoming' WHEN '-1' THEN 'Deleted' END Status from SeriesStatus WHERE rowid IN ($newseriesarray);"
   serieschanges=1
 fi
 
@@ -361,7 +361,7 @@ fi
 if [[ $updatedseriesarray != '' ]]
 then
   echo -e "\n*** Series Status Changes ***"
-  sqlite3 -header -column "$comparisondb" "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT B.Showname,CASE A.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Missing from TVDB' END 'Previous Status',CASE B.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Missing from TVDB' END 'Current Status' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriesarray) ORDER By A.Showname;"
+  sqlite3 -header -column "$comparisondb" "ATTACH DATABASE '$tempdb' AS 'newdata'; SELECT B.Showname,CASE A.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Upcoming' WHEN '-1' THEN 'Deleted' END 'Previous Status',CASE B.Ended WHEN '0' THEN 'Ongoing' WHEN '1' THEN 'Ended' WHEN '2' THEN 'Upcoming' WHEN '-1' THEN 'Deleted' END 'Current Status' from SeriesStatus A LEFT JOIN newdata.SeriesStatus B ON A.SeriesID = B.SeriesID  WHERE A.rowid IN ($updatedseriesarray) ORDER By A.Showname;"
   serieschanges=1
 fi
 
