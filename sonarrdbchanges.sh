@@ -76,7 +76,8 @@ do
       seriesid=${series##*=}
       seriesid=${seriesid/%;/}
       # build array of seriesids for deleted items
-      deletedseriesarray+=($seriesid)
+      #deletedseriesarray+=($seriesid)
+      updatedseriesmaybedeletedarray+=($seriesid)
     ;;
     UPDATE)
       seriesid=${series##*=}
