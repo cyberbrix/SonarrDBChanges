@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script will show changes in the sonarr database. Works with v2 and v3
-# v 1.4
+# v 1.4.1
 
 #check if sqlite3 installed
 if ! type sqlite3 &> /dev/null
@@ -50,7 +50,7 @@ fi
 # Create smaller database of current data to compare
 tempdb="$homedir/.sonarrtemp.db"
 
-# new create smllaer db of current data
+# new create smaller db of current data
 sqlite3 "$tempdb" "ATTACH DATABASE '$sonarrdbpath' AS 'nzbdrone';CREATE TABLE EpisodeList (Id INTEGER, SeriesID INTEGER,Season INTEGER,Episode INTEGER,Title TEXT,Airdate TEXT);CREATE TABLE SeriesStatus (SeriesID INTEGER, Showname TEXT,Ended INTEGER);INSERT INTO EpisodeList SELECT Id,SeriesID,SeasonNumber,EpisodeNumber,Title,Airdate FROM nzbdrone.Episodes;INSERT INTO SeriesStatus SELECT Id,Title,Status FROM nzbdrone.Series;"
 
 # create arrays used for data processing
