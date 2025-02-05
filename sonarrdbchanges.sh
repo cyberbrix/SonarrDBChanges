@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script will show changes in the sonarr database. Works with v2 and v3
+# This script will show changes in the sonarr database. Works with v3
 # v 1.4.1
 
 #check if sqlite3 installed
@@ -18,8 +18,16 @@ fi
 # Expand homepath to avoid variables. sqlite commands and cron can have issue with it
 eval homedir=~
 
-# Find the sonarr db
-sonarrdbpath=$(find / -type f \( -name "sonarr.db" -o -name "nzbdrone.db" \) -printf '%T+ %p\n'  2>/dev/null | grep -iv "find:/radarr" | sort -r | head -1 | cut -d' ' -f2-)
+# Sets the file path. If it doesn't exist, search for it
+sonarrdbpath="/var/lib/sonarr/sonarr.db"
+
+if [ ! -f "$sonarrdbpath" ]
+then
+  echo "File doees not exist"
+  # Find the sonarr db
+  sonarrdbpath=$(find / -type f \( -name "sonarr.db" -o -name "nzbdrone.db" \) -printf '%T+ %p\n'  2>/dev/null | grep -iv "find:/radarr" | sort -r | head -1 | cut -d' ' -f2-)
+fi
+
 if [[ ! -r "$sonarrdbpath" ]]
 then
   echo -e "\nnzbdone.db is not found or accessible"
@@ -228,6 +236,14 @@ then
     
     # check for the episode in the new db. if it exists, do nothing, if it 	
     if [[ $(sqlite3 "$tempdb" "SELECT EXISTS(SELECT * FROM EpisodeList WHERE ID=$episodeidtocheck);") -eq 1 ]]
+    then
+      continue
+    fi
+
+    # Don't add episodes for deleted series
+    #tmpdeletedseries=${deletedseriesarray[*]}
+    tmpdeletedseries=$(echo ${deletedseriesarray[@]} | sed 's/ /,/g')
+    if [[ $(sqlite3 "$comparisondb" "SELECT 1 AS value_found WHERE $seriesidtocheck IN ( select SeriesID from SeriesStatus WHERE rowid IN ($tmpdeletedseries));") -eq 1 ]]
     then
       continue
     fi
