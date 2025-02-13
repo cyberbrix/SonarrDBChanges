@@ -20,19 +20,8 @@ sqlite3, sqldiff
 
 ## How to get them
 ```
-sqlite3:
-$ apt-get install sqlite3
-
-sqldiff:
-1. Navigate to https://www.sqlite.org/download.html
-2. Download the appropriate precompiled binaries for your operating sytsem
-3. Unzip sqldiff from the .zip file
-4. Place sqldiff file in the appropriate directory
-Example for Linux:
-- Put the file in: /usr/bin/
-- Update the permissions to match sqlite3
-$ chmod 755 /usr/bin/sqldiff
-$ chown root:root /usr/bin/sqldiff
+https://www.sqlite.org/index.html
+$ apt-get install sqlite3 sqlite3-tools
 ```
 
 ## Current Issues
