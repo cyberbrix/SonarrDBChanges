@@ -29,6 +29,8 @@ $ apt-get install sqlite3 sqlite3-tools
 The column width for each section is set by the first line displayed. Spacing can end up being messed up
 
 The code isn't perfect and always improving. If you have input, please let me know here.
+
+Deleted episodes for deleted shows still show. Not sure why, but haven't had time to debug it.
 ```
 
 
