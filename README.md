@@ -30,7 +30,7 @@ The column width for each section is set by the first line displayed. Spacing ca
 
 The code isn't perfect and always improving. If you have input, please let me know here.
 
-Deleted episodes for deleted shows still show. Not sure why, but haven't had time to debug it.
+Deleted episodes for a deleted shows still list out individually. Should be skipped during the deleted episode list. Not sure why, but haven't had time to debug it.
 ```
 
 
