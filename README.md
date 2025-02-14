@@ -15,13 +15,13 @@ Any found changes will show the previous and current information.
 The following tools are needed
 
 ```
-sqlite3,sqldiff
+sqlite3, sqldiff
 ```
 
 ## How to get them
 ```
-SQLite - https://www.sqlite.org/index.html/
-apt-get install sqlite3
+https://www.sqlite.org/index.html
+$ apt-get install sqlite3 sqlite3-tools
 ```
 
 ## Current Issues
